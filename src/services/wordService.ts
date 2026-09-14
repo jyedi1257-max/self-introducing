@@ -11,16 +11,39 @@ export interface LoadWordsResult {
 }
 
 /**
+ * Firestore 를 기다리는 시간.
+ * Firestore SDK 는 연결이 막히면 스스로 포기할 때까지 10초 넘게 재시도한다.
+ * 수업 중에 빈 로딩 화면을 오래 보여주지 않도록 여기서 먼저 끊고 기본 단어로 넘어간다.
+ */
+const FETCH_TIMEOUT_MS = 3500;
+
+class WordFetchTimeout extends Error {}
+
+/**
  * 단어 목록을 가져온다.
- * Firestore 가 실패하거나 비어 있으면 기본 단어로 대체해 수업이 끊기지 않게 한다.
+ * Firestore 가 느리거나 실패하거나 비어 있으면 기본 단어로 대체해 수업이 끊기지 않게 한다.
  */
 export async function loadWords(type: WordType): Promise<LoadWordsResult> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
   try {
-    const words = await fetchWords(type);
+    const words = await Promise.race([
+      fetchWords(type),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new WordFetchTimeout('word-fetch-timeout')), FETCH_TIMEOUT_MS);
+      }),
+    ]);
     if (words.length > 0) return { words, usedFallback: false };
   } catch (error) {
-    console.warn('[wordService] Firestore 단어를 불러오지 못했습니다.', error);
+    if (error instanceof WordFetchTimeout) {
+      console.warn('[wordService] Firestore 응답이 느려서 기본 단어로 진행합니다.');
+    } else {
+      console.warn('[wordService] Firestore 단어를 불러오지 못했습니다.', error);
+    }
+  } finally {
+    clearTimeout(timer);
   }
+
   return { words: defaultWordsFor(type), usedFallback: true };
 }
 
