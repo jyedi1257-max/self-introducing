@@ -39,7 +39,6 @@ export function ReasonScreen() {
           value={traitReason}
           maxLength={MAX_REASON_LENGTH}
           autoComplete="off"
-          placeholder="궁금한 것이 많아서"
           onChange={(event) => setTraitReason(event.target.value)}
         />
         <Button variant="ghost" onClick={() => setTraitReason(DONT_KNOW)}>
@@ -61,7 +60,6 @@ export function ReasonScreen() {
           value={characterReason}
           maxLength={MAX_REASON_LENGTH}
           autoComplete="off"
-          placeholder="고양이를 좋아해서"
           onChange={(event) => setCharacterReason(event.target.value)}
         />
         <Button variant="ghost" onClick={() => setCharacterReason(DONT_KNOW)}>
