@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_APP_ID?: string;
   readonly VITE_RECAPTCHA_ENTERPRISE_SITE_KEY?: string;
   readonly VITE_APPCHECK_DEBUG_TOKEN?: string;
+  readonly VITE_AI_BACKEND?: string;
+  readonly VITE_AI_LOCATION?: string;
 }
 
 interface ImportMeta {

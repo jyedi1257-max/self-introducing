@@ -2,11 +2,18 @@ import {
   getAI,
   getGenerativeModel,
   GoogleAIBackend,
+  VertexAIBackend,
   ResponseModality,
   ImageConfigAspectRatio,
   type GenerativeModel,
 } from 'firebase/ai';
-import { getFirebaseApp, firebaseEnabled, IMAGE_MODEL } from './config';
+import {
+  getFirebaseApp,
+  firebaseEnabled,
+  IMAGE_MODEL,
+  AI_BACKEND,
+  AI_LOCATION,
+} from './config';
 
 let model: GenerativeModel | undefined;
 
@@ -15,7 +22,9 @@ function imageModel(): GenerativeModel | undefined {
   if (!firebaseEnabled || !app) return undefined;
 
   if (!model) {
-    const ai = getAI(app, { backend: new GoogleAIBackend() });
+    const backend =
+      AI_BACKEND === 'google' ? new GoogleAIBackend() : new VertexAIBackend(AI_LOCATION);
+    const ai = getAI(app, { backend });
     model = getGenerativeModel(ai, {
       model: IMAGE_MODEL,
       generationConfig: {
