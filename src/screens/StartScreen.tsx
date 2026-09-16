@@ -37,7 +37,6 @@ export function StartScreen() {
             value={name}
             maxLength={MAX_WORD_LENGTH}
             autoComplete="off"
-            placeholder="지우"
             onChange={(event) => setName(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') start();
