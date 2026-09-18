@@ -115,6 +115,11 @@ npm run deploy              # build + hosting/firestore 배포
 - 모달 안에서 포커스가 갇히고 Esc 로 닫힘, 닫으면 원래 자리로 돌아감
 - `prefers-reduced-motion` 지원
 
+## 개발 기록
+
+설정하면서 막혔던 것들과 그 원인은 [docs/개발노트.md](docs/개발노트.md) 에 정리해 두었다.
+특히 Firebase + Gemini 결제·할당량 관련 함정 세 가지는 다시 겪지 않도록 증상과 원인을 같이 적었다.
+
 ## 폴더 구조
 
 ```
