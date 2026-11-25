@@ -1,9 +1,4 @@
-import { buildImagePrompt } from '../utils/buildImagePrompt';
-import {
-  generateImageFromPrompt,
-  SafetyBlockedError,
-  type ImageResult,
-} from '../firebase/ai';
+import { generateCloudflareImage, SafetyBlockedError, type ImageResult } from './cloudflareImage';
 import { firebaseEnabled } from '../firebase/config';
 import type { GenerationError } from '../app/types';
 
@@ -25,14 +20,8 @@ let inFlight: Promise<ImageResult> | null = null;
 export async function generateImage(options: GenerateOptions): Promise<ImageResult> {
   if (inFlight) return inFlight;
 
-  const prompt = buildImagePrompt({
-    trait: options.trait,
-    character: options.character,
-    extraWhimsical: options.extraWhimsical ?? false,
-  });
-
   const task = firebaseEnabled
-    ? generateImageFromPrompt(prompt)
+    ? generateCloudflareImage(options)
     : mockImage(options);
 
   inFlight = task.finally(() => {
