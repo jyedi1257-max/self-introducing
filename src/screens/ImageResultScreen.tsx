@@ -36,6 +36,9 @@ export function ImageResultScreen({
               description="다른 단어를 골라 볼까요?"
             >
               <Button onClick={onBackToWords}>단어 다시 고르기</Button>
+              <Button variant="secondary" onClick={onContinueWithoutImage}>
+                그림 없이 자기소개 계속하기
+              </Button>
             </ErrorMessage>
           ) : (
             <ErrorMessage title="그림을 만들지 못했어요." description="한 번 더 만들어 볼까요?">
