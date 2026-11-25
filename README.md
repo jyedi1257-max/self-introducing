@@ -32,10 +32,10 @@ React + TypeScript + Vite SPA. Next.js 는 쓰지 않습니다(서버 렌더링�
 | Hosting | 웹앱 배포 |
 | Authentication | 익명 로그인 (로그인 화면 없음) |
 | Firestore | `words`, `wordSuggestions`, `admins` |
-| AI Logic | Gemini 이미지 생성 |
+| Workers AI (별도 Cloudflare Worker) | FLUX.1 Schnell 이미지 생성 |
 | App Check | reCAPTCHA Enterprise |
 
-이미지 모델은 `src/firebase/config.ts` 의 `IMAGE_MODEL` 한 곳에서만 관리합니다.
+무료 이미지 생성 전환은 [Cloudflare 배포 및 안전 검증 안내](docs/cloudflare-free-image.md)를 따릅니다. 기존 Gemini 모듈은 롤백 참고용으로만 남겨 둡니다.
 
 ## 실행
 
@@ -58,7 +58,7 @@ Firebase Console 에서 함께 켜 주세요.
 
 1. Authentication → 로그인 방법 → **익명** 사용 설정
 2. Firestore Database 만들기
-3. Firebase AI Logic 사용 설정
+3. Cloudflare Worker 배포 및 `VITE_IMAGE_WORKER_URL` 설정 (위 안내 참조)
 4. App Check → reCAPTCHA Enterprise 등록
 
 ### 기본 단어 넣기
@@ -94,7 +94,7 @@ npm run deploy              # build + hosting/firestore 배포
   Firebase Console → App Check → 앱 → 디버그 토큰 관리에 등록하고
   `.env.local` 의 `VITE_APPCHECK_DEBUG_TOKEN` 에도 넣어 두면 계속 같은 토큰을 씁니다.
 - 이미지 생성은 한 세션에 **6번**까지로 제한합니다.
-  보안 제한이 아니라 UX/비용 방어선입니다. 서버측 quota 가 필요해지면 M2 에서 Cloud Functions 를 붙입니다.
+  Cloudflare Worker에서 UTC 기준 하루 전체 80회, 익명 UID당 6회를 추가로 제한합니다.
 
 ## 장애가 나도 수업은 계속됩니다
 

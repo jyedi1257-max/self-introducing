@@ -1,0 +1,20 @@
+name = "self-introducing-image"
+main = "index.js"
+compatibility_date = "2026-09-16"
+workers_dev = true
+
+[ai]
+binding = "AI"
+
+[vars]
+ENABLE_GENERATION = "false"
+FIREBASE_PROJECT_ID = "self-introducing"
+ALLOWED_ORIGINS = "https://self-introducing.web.app,https://self-introducing.firebaseapp.com"
+
+[[durable_objects.bindings]]
+name = "QUOTA"
+class_name = "ImageQuota"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ImageQuota"]
