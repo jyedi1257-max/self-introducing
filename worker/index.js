@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { imagePassesReview } from "./output-review.js";
 import { buildPrompt, quotaDecision } from "./policy.js";
 
 // Verify Firebase RS256 JWTs with Workers Web Crypto and Google's rotating JWKs.
@@ -120,7 +121,9 @@ export default {
       if (typeof result?.image !== "string" || !result.image.startsWith("/9j/") || result.image.length > 8_000_000) {
         return reply({error:"unavailable"},502);
       }
-      return reply({dataUrl:"data:image/jpeg;base64,"+result.image});
+      const dataUrl = "data:image/jpeg;base64," + result.image;
+      if (!(await imagePassesReview(env.AI, dataUrl))) return reply({error:"safety"},422);
+      return reply({dataUrl});
     } catch { return reply({error:"unavailable"},503); }
   }
 };
