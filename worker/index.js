@@ -1,20 +1,48 @@
 import { DurableObject } from "cloudflare:workers";
-import { createRemoteJWKSet, jwtVerify } from "jose";
 import { buildPrompt, quotaDecision } from "./policy.js";
 
-const keys = createRemoteJWKSet(new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"));
+// Verify Firebase RS256 JWTs with Workers Web Crypto and Google's rotating JWKs.
+let keyCache = { expires: 0, keys: [] };
+function decode64url(value) {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error("invalid token");
+  return Uint8Array.from(atob(value.replace(/-/g,"+").replace(/_/g,"/")), c=>c.charCodeAt(0));
+}
+async function verifyFirebaseToken(token, projectId) {
+  const parts = token.split(".");
+  if(parts.length !== 3) throw new Error("invalid token");
+  const decode = value => JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(decode64url(value)));
+  const header = decode(parts[0]);
+  const payload = decode(parts[1]);
+  const now = Math.floor(Date.now()/1000);
+  if(header.alg !== "RS256" || typeof header.kid !== "string" ||
+     payload.iss !== "https://securetoken.google.com/"+projectId || payload.aud !== projectId ||
+     !Number.isInteger(payload.exp) || payload.exp <= now ||
+     !Number.isInteger(payload.iat) || payload.iat > now ||
+     !Number.isInteger(payload.auth_time) || payload.auth_time > now ||
+     typeof payload.sub !== "string" || !payload.sub || payload.sub.length > 128)
+     throw new Error("invalid claims");
+  if(Date.now() >= keyCache.expires) {
+    const response = await fetch("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com");
+    if(!response.ok) throw new Error("key unavailable");
+    const data = await response.json();
+    if(!Array.isArray(data.keys)) throw new Error("key unavailable");
+    const maxAge = Number(response.headers.get("Cache-Control")?.match(/max-age=(\d+)/)?.[1] ?? 0);
+    keyCache = {expires:Date.now()+Math.min(maxAge,3600)*1000,keys:data.keys};
+  }
+  const jwk = keyCache.keys.find(k=>k.kid===header.kid && k.kty==="RSA");
+  if(!jwk) throw new Error("unknown key");
+  const key = await crypto.subtle.importKey("jwk",jwk,{name:"RSASSA-PKCS1-v1_5",hash:"SHA-256"},false,["verify"]);
+  if(!await crypto.subtle.verify("RSASSA-PKCS1-v1_5",key,decode64url(parts[2]),new TextEncoder().encode(parts[0]+"."+parts[1])))
+    throw new Error("invalid signature");
+  return payload;
+}
 const MODEL = "@cf/black-forest-labs/flux-1-schnell";
 const MAX_BODY = 2048;
 
 async function verifyUser(request, projectId) {
   const token = request.headers.get("Authorization")?.match(/^Bearer ([^ ]+)$/)?.[1];
   if (!token || token.length > 8192) throw new Error("unauthorized");
-  const { payload } = await jwtVerify(token, keys, {
-    issuer: "https://securetoken.google.com/" + projectId,
-    audience: projectId,
-    algorithms: ["RS256"],
-    requiredClaims: ["exp", "iat", "sub", "auth_time"],
-  });
+  const payload = await verifyFirebaseToken(token, projectId);
   const now = Math.floor(Date.now() / 1000);
   if (!payload.sub || payload.sub.length > 128 ||
     typeof payload.auth_time !== "number" || payload.auth_time > now ||
@@ -81,6 +109,7 @@ export default {
       prompt = buildPrompt(JSON.parse(raw));
     } catch { return reply({error:"invalid"},400); }
     if (!prompt) return reply({error:"safety"},422);
+    if (env.ENABLE_GENERATION !== "true") return reply({error:"preview-not-enabled"},503);
     try {
       const gate = env.QUOTA.get(env.QUOTA.idFromName("global"));
       const reserved = await gate.fetch("https://quota.internal/reserve", {method:"POST",body:JSON.stringify({user})});
